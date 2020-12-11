@@ -745,14 +745,18 @@ async function initRepository() {
     return;
   }
 
-  function initFilterSearchDropdown(selector) {
+  function initFilterSearchDropdown(selector, optionalOnChangeFunc) {
     const $dropdown = $(selector);
     $dropdown.dropdown({
       fullTextSearch: true,
       selectOnKeydown: false,
       onChange(_text, _value, $choice) {
+        if (optionalOnChangeFunc) {
+          optionalOnChangeFunc(_text, _value, $choice);
+        } else {
         if ($choice.data('url')) {
           window.location.href = $choice.data('url');
+        }
         }
       },
       message: {noResults: $dropdown.data('no-results')}
@@ -1164,7 +1168,30 @@ async function initRepository() {
   // Pull request
   const $repoComparePull = $('.repository.compare.pull');
   if ($repoComparePull.length > 0) {
-    initFilterSearchDropdown('.choose.branch .dropdown');
+    // initialize onchange listener for our dropdowns
+    initFilterSearchDropdown('.choose.branch .dropdown', function(_text, _value, $choice) {
+      // Set the text of this dropdowns span
+      const lParentSpan = $choice.closest('.ui.floating.filter.dropdown').find('span.branch-name');      
+      lParentSpan.text(_text);
+      if(lParentSpan.hasClass('base')){
+        lParentSpan.data('base-url', $choice.data('base-url'));
+        lParentSpan.data('base-branchname',$choice.data('base-branchname'));
+      } else {
+        lParentSpan.data('head-branchname',$choice.data('head-branchname'))
+      }
+
+      const lBaseUrl = $('span.branch-name.base').data('base-url');
+      const lBaseBranchName = $('span.branch-name.base').data('base-branchname');
+      const lTargetBranchName = $('span.branch-name.head').data('head-branchname');
+      // Update link on our compare button
+      $('#compare-calc-changes').attr('href', lBaseUrl + lBaseBranchName + '...' + lTargetBranchName);
+      // show the hint to click on calculate changes to update / see the diff
+      $('#info-calculate-changes-needed').show();
+      // hide any old contents from compare page
+      $('#compare-contents-area').remove();
+      // Activate the calculate changes button
+      $('#compare-calc-changes-btn').removeClass('disabled');
+    });
     // show pull request form
     $repoComparePull.find('button.show-form').on('click', function (e) {
       e.preventDefault();
